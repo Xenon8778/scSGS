@@ -124,10 +124,17 @@ sctype_score <- function(scRNAseqData, scaled = !0, gs, gs2 = NULL, gene_names_t
   # z-scale if not
   if(!scaled) Z <- t(scale(t(scRNAseqData))) else Z <- scRNAseqData
 
+  pb = txtProgressBar(min = 0,
+                      max = nrow(cell_markers_genes_score),
+                      initial = 0,
+                      style = 3)
+
   # multiple by marker sensitivity
   for(jj in 1:nrow(cell_markers_genes_score)){
     Z[cell_markers_genes_score[jj,"gene_"], ] = Z[cell_markers_genes_score[jj,"gene_"], ] * cell_markers_genes_score[jj, "score_marker_sensitivity"]
+    setTxtProgressBar(pb,jj)
   }
+  close(pb)
 
   # subselect only with marker genes
   Z = Z[unique(c(unlist(gs),unlist(gs2))), ]
@@ -174,7 +181,7 @@ Annotate_cells <- function(data = x, res = 0.8, tissue = "All", Scale = F, annot
   data <- NormalizeData(data)
   data <- FindVariableFeatures(data, selection.method = "vst", nfeatures = 2000)
   if (isTRUE(Scale)){data <- ScaleData(data, features = rownames(data))}
-  data <- RunPCA(data, features = NULL,verbose = F)
+  data <- RunPCA(data,verbose = F)
   data <- FindNeighbors(data, dims = 1:ndims)
   data <- FindClusters(data, resolution = res)
   data <- RunUMAP(data, dims = 1:ndims)
