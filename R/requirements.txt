@@ -1,0 +1,11 @@
+plotly
+Seurat
+dplyr
+ggplot2
+ggpubr
+sparseMatrixStats
+Matrix
+presto
+
+enrichR
+STRINGdb
