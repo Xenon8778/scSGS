@@ -172,7 +172,7 @@ Annotate_cells <- function(data = x, res = 0.8, tissue = "All", Scale = F, annot
     print("Using ScType")
     dataDB = read.xlsx(db_)
     if ("All" %in% tissue){
-      print("Checking across all celltypes.\n Specify follwing celltypes for in-depth analysis")
+      print("Checking across all celltypes.\n Specify following cell types for in-depth analysis")
       print(unique(dataDB$tissueType))
     }
   }
