@@ -168,6 +168,10 @@ Annotate_cells <- function(data = x, res = 0.8, tissue = "All", Scale = F, annot
   if (DB == 'PanDB'){
     print("Using PanglaoDB")
     dataDB = prep_panglaodb(tissue = tissue, species = species)
+    if ("All" %in% tissue){
+      print("Checking across all celltypes.\n Specify following cell types for in-depth analysis")
+      print(unique(dataDB$tissueType))
+    }
   } else {
     print("Using ScType")
     dataDB = read.xlsx(db_)
