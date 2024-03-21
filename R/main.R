@@ -18,8 +18,8 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE){
   splinefit_df = as.data.frame(Means)
   splinefit_df$CV = CV
   splinefit_df$Dropout = Dropout
-  splinefit_df$logMean = log(Means)
-  splinefit_df$logCV = log(CV)
+  splinefit_df$logMean = log(Means+1)
+  splinefit_df$logCV = log(CV+1)
   splinefit_df = splinefit_df %>% arrange(Dropout)
 
   # Calculate the differences and the squared differences between consecutive elements
