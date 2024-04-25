@@ -6,7 +6,8 @@ library(sparseMatrixStats)
 library(Matrix)
 library(presto)
 
-HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE){
+HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE,
+                          use.ndist = T){
   adata = data
 
   ## Highly Variable Genes
@@ -36,15 +37,38 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE){
   fity <- smooth.spline(s, splinefit_df$logCV, df = 15, spar = 0.75)
   fitz <- smooth.spline(s, splinefit_df$Dropout, df = 15, spar = 0.75)
 
-
+  # Computing Distances
   xyz1 = cbind(predict(fitx,s)$y,predict(fity,s)$y,predict(fitz,s)$y)
   xyz1 = as.data.frame(xyz1)
   colnames(xyz1) = c('logMean','logCV','Dropout')
-
   euclidean <- function(a, b) sqrt(sum((a - b)^2))
-  Dist_HVG = c()
-  for (i in 1:nrow(xyz)){
-    Dist_HVG = append(Dist_HVG,euclidean(xyz[i,],xyz1[i,]))
+  if (use.ndist == F){
+    Dist_HVG = c()
+    pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
+    for (i in 1:nrow(xyz)){
+      Dist_HVG = append(Dist_HVG,euclidean(xyz[i,],xyz1[i,]))
+      setTxtProgressBar(pb,i)
+    }
+    close(pb)
+  } else {
+    library(sf)
+    Dist_HVG = c()
+    df = xyz1
+    df = apply(df,1,as.list)
+    df = lapply(df,as.numeric)
+    func3 <- function(x){
+      st_point(as.numeric(unlist(x)))
+    }
+    df = lapply(df,func3)
+    p2 = st_sfc(df)
+    pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
+    for (i in 1:nrow(xyz)){
+      p1 = st_sfc(st_point(as.numeric(xyz[i,])))
+      near_point = st_nearest_feature(p1, p2)
+      Dist_HVG = append(Dist_HVG,euclidean(xyz[i,],xyz1[near_point,]))
+      setTxtProgressBar(pb,i)
+    }
+    close(pb)
   }
   splinefit_df$Distance = Dist_HVG
   splinefit_df$splinex = xyz1$logMean
@@ -72,8 +96,10 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE){
   return(splinefit_df)
 }
 
-scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit', show.spline = FALSE,
-                  rm.mt = F, rm.rp = F, filter_data = TRUE){
+scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
+                  show.spline = FALSE, calcHVG = FALSE,
+                  nfeatures = 200, ncells = 10,
+                  rm.mt = FALSE, rm.rp = FALSE, filter_data = TRUE){
 
   #> data -> Gene x Cell count matrix in the form of a data frame, matrix or sparse matrix with
   #>         rows as genes and columns as cells. Row names should be gene names.
@@ -100,28 +126,29 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit', show.spline = F
   GoI = GoI
   GoI_Mask = c()
   for (i in spmat[GoI,]){
-    if (i >= 1){GoI_Mask=append(GoI_Mask,"SGS-WT")
-    } else {GoI_Mask=append(GoI_Mask,"SGS-KO")}
+    if (i >= 1){GoI_Mask=append(GoI_Mask,"Active")
+    } else {GoI_Mask=append(GoI_Mask,"Silenced")}
   }
+  print("SGS counts:")
+  print(table(GoI_Mask))
   GoI_Mask = as.factor(GoI_Mask)
 
   res$GoI_Mask = GoI_Mask
 
   # Filtering
   if (filter_data == TRUE){
-    spmat <- spmat[,colCounts(spmat) > 500]
-    spmat <- spmat[rowCounts(spmat) > 15,]
+    spmat <- spmat[,colCounts(spmat) > nfeatures]
+    spmat <- spmat[rowCounts(spmat) > ncells,]
   }
 
   # Making binary counts
   GoI = GoI
   GoI_Mask = c()
   for (i in spmat[GoI,]){
-    if (i >= 1){GoI_Mask=append(GoI_Mask,"SGS-WT")
-    } else {GoI_Mask=append(GoI_Mask,"SGS-KO")}
+    if (i >= 1){GoI_Mask=append(GoI_Mask,"Active")
+    } else {GoI_Mask=append(GoI_Mask,"Silenced")}
   }
-  print("SGS counts:")
-  print(table(GoI_Mask))
+
   GoI_Mask = as.factor(GoI_Mask)
 
   # Filter mitochondrial and ribosomal protein genes
@@ -141,40 +168,42 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit', show.spline = F
   matnorm@x = matnorm@x / rep.int(colSums(matnorm), diff(matnorm@p))
   matnorm@x = log(matnorm@x*10000+1) #Scale factor 10000
 
-  print("Computing Highly Variable Genes")
-  # Identifying HVGs with 3D Splinefit
-  if (HVG_algo == 'splinefit'){
-    HVG_df = HVG_splinefit(spmat, nHVGs = nHVG, show.spline = show.spline)
-    res$HVG_df = HVG_df
-    res$HV_genes = row.names(HVG_df[HVG_df$HVG == T &
-                                      HVG_df$Dropout>0.25 &
-                                      HVG_df$Dropout<0.75,])
-  }
+  if (calcHVG == T){
+    print("Computing Highly Variable Genes")
+    # Identifying HVGs with 3D Splinefit
+    if (HVG_algo == 'splinefit'){
+      HVG_df = HVG_splinefit(spmat, nHVGs = nHVG, show.spline = show.spline)
+      res$HVG_df = HVG_df
+      res$HV_genes = row.names(HVG_df[HVG_df$HVG == T &
+                                        HVG_df$Dropout>0.25 &
+                                        HVG_df$Dropout<0.75,])
+    }
 
-  # Identifying HVGs with Seurat
-  if (HVG_algo == 'seurat'){
-    seuratmat = CreateAssayObject(matnorm)
-    seuratmat = FindVariableFeatures(seuratmat, selection.method = "vst", nfeatures = 500)
-    HVG_df = seuratmat@meta.features
-    res$HVG_df = HVG_df
-    res$HV_genes = row.names(HVG_df[HVG_df$vst.variable == T,])
-  }
+    # Identifying HVGs with Seurat
+    if (HVG_algo == 'seurat'){
+      seuratmat = CreateAssayObject(matnorm)
+      seuratmat = FindVariableFeatures(seuratmat, selection.method = "vst", nfeatures = 500)
+      HVG_df = seuratmat@meta.features
+      res$HVG_df = HVG_df
+      res$HV_genes = row.names(HVG_df[HVG_df$vst.variable == T,])
+    }
 
-  ## Load TF Database
-  library('openxlsx')
-  Tf_db = read.xlsx('https://static-content.springer.com/esm/art%3A10.1038%2Fs41587-020-0742-6/MediaObjects/41587_2020_742_MOESM3_ESM.xlsx')[,1]
-  res$TF = res$HV_genes[res$HV_genes %in% Tf_db]
+    ## Load TF Database
+    library('openxlsx')
+    Tf_db = read.xlsx('https://static-content.springer.com/esm/art%3A10.1038%2Fs41587-020-0742-6/MediaObjects/41587_2020_742_MOESM3_ESM.xlsx')[,1]
+    res$TF = res$HV_genes[res$HV_genes %in% Tf_db]
 
-  ## Check if GoI is HVG
-  if (GoI %in% res$HV_genes == T){
-    print("The Gene of Interest is an HVG")
-  } else {
-    print("Beware! The Gene of Interest is not variable enough.")
+    ## Check if GoI is HVG
+    if (GoI %in% res$HV_genes == T){
+      print("The Gene of Interest is an HVG")
+    } else {
+      print("Beware! The Gene of Interest is not variable enough.")
+    }
   }
 
   # Splitting the matrices
-  SGS_WT = matnorm[,GoI_Mask=='SGS-WT']
-  SGS_KO = matnorm[,GoI_Mask=='SGS-KO']
+  SGS_WT = matnorm[,GoI_Mask=='Active']
+  SGS_KO = matnorm[,GoI_Mask=='Silenced']
 
   # Calculate percent expressed
   thresh.min <- 0
@@ -210,14 +239,13 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit', show.spline = F
 
   # Wilcoxon Rank-sum Test
   DE = wilcoxauc(matnorm[features,], GoI_Mask)
-  DE = DE %>% filter(group == 'SGS-KO')
+  DE = DE %>% filter(group == 'Silenced')
   DE.res = fc.results
   DE.res$p_val = DE$pval
   DE.res$p_val_adj = p.adjust(p = DE.res$p_val,
                               method = "BH",
                               n = nrow(matnorm[features,]))
-  DE.res = DE.res %>% arrange(p_val_adj) %>% mutate(genes = row.names(.)) %>%
-    filter(p_val_adj < 0.1)
+  DE.res = DE.res %>% arrange(p_val_adj) %>% mutate(genes = row.names(.))
 
   res$DE = DE.res
   return(res)
@@ -301,6 +329,7 @@ get.STRINGdb <- function(res, version = "12.0", species = 9606, ngenes = NULL){
   net_mapped <- string_db$map(DE_df, 'genes', removeUnmappedRows = TRUE )
   hits <- net_mapped$STRING_id
 
+  httr::set_config(httr::config(ssl_verifypeer=0L))
   # Plotting String Network
   string_db$plot_network(hits)
 }
