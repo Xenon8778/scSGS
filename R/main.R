@@ -169,8 +169,9 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     matnorm = spmat
     matnorm@x = matnorm@x / rep.int(colSums(matnorm), diff(matnorm@p))
     matnorm@x = log(matnorm@x*10000+1) #Scale factor 10000
+  } else {
+    matnorm = spmat
   }
-  matnorm = spmat
 
   if (calcHVG == T){
     print("Computing Highly Variable Genes")
