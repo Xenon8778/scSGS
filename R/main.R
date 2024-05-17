@@ -6,7 +6,8 @@ library(sparseMatrixStats)
 library(Matrix)
 library(presto)
 
-HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE,
+HVG_splinefit <- function(data = x, degf = 15,
+                          spar = 0.75, nHVGs = 2000, show.spline = FALSE,
                           use.ndist = T){
   adata = data
 
@@ -22,6 +23,7 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE,
   splinefit_df$logMean = log(Means+1)
   splinefit_df$logCV = log(CV+1)
   splinefit_df = splinefit_df %>% arrange(Dropout)
+  splinefit_df = splinefit_df %>% filter(Dropout>0.01 & Dropout<0.99) # Trimming ends
 
   # Calculate the differences and the squared differences between consecutive elements
   diff_lgu <- diff(splinefit_df$logMean)
@@ -31,16 +33,17 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE,
 
   # Calculate the cumulative sum
   s <- c(0, cumsum(sqrt(diff_squared_sum)))
-  xyz = cbind(splinefit_df$logMean,splinefit_df$logCV,splinefit_df$Dropout)
+  xyz = splinefit_df %>% select(logMean,logCV,Dropout)
 
-  fitx <- smooth.spline(s, splinefit_df$logMean, df = 15, spar = 0.75)
-  fity <- smooth.spline(s, splinefit_df$logCV, df = 15, spar = 0.75)
-  fitz <- smooth.spline(s, splinefit_df$Dropout, df = 15, spar = 0.75)
+  fitx <- smooth.spline(s, splinefit_df$logMean, df = degf, spar = spar)
+  fity <- smooth.spline(s, splinefit_df$logCV, df = degf, spar = spar)
+  fitz <- smooth.spline(s, splinefit_df$Dropout, df = degf, spar = spar)
 
   # Computing Distances
   xyz1 = cbind(predict(fitx,s)$y,predict(fity,s)$y,predict(fitz,s)$y)
   xyz1 = as.data.frame(xyz1)
   colnames(xyz1) = c('logMean','logCV','Dropout')
+  rownames(xyz1) = rownames(splinefit_df)
   euclidean <- function(a, b) sqrt(sum((a - b)^2))
   if (use.ndist == F){
     Dist_HVG = c()
@@ -51,21 +54,14 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE,
     }
     close(pb)
   } else {
-    library(sf)
+    library(Biobase)
     Dist_HVG = c()
-    df = xyz1
-    df = apply(df,1,as.list)
-    df = lapply(df,as.numeric)
-    func3 <- function(x){
-      st_point(as.numeric(unlist(x)))
-    }
-    df = lapply(df,func3)
-    p2 = st_sfc(df)
+    df = as.matrix(xyz1)
     pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
     for (i in 1:nrow(xyz)){
-      p1 = st_sfc(st_point(as.numeric(xyz[i,])))
-      near_point = st_nearest_feature(p1, p2)
-      Dist_HVG = append(Dist_HVG,euclidean(xyz[i,],xyz1[near_point,]))
+      p1 = as.matrix(xyz[i,])
+      near_point = matchpt(p1, df)
+      Dist_HVG = append(Dist_HVG,near_point$distance)
       setTxtProgressBar(pb,i)
     }
     close(pb)
@@ -74,16 +70,18 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE,
   splinefit_df$splinex = xyz1$logMean
   splinefit_df$spliney = xyz1$logCV
   splinefit_df$splinez = xyz1$Dropout
-  splinefit_df = splinefit_df %>% arrange(-Distance)
-  splinefit_df$HVG = c(rep(TRUE,nHVGs),rep(FALSE,(nrow(splinefit_df)-nHVGs)))
-  splinefit_df = splinefit_df[order(splinefit_df$Dropout),]
+  top_HVG = splinefit_df %>% top_n(n = nHVGs, wt = Distance)
+  mask = rownames(splinefit_df) %in% rownames(top_HVG)
+  splinefit_df$HVG = mask
+  splinefit_df = splinefit_df %>% arrange(Dropout)
 
+  # Plotting in 3D
   if(show.spline == TRUE){
     fig = plot_ly(splinefit_df, x = ~logMean, y = ~logCV, z = ~Dropout, mode = 'lines+marker',
                   color = ~HVG, colors = c('grey','red'))
     fig <- fig %>% add_markers(mode = 'marker', type = "scatter3d", opacity = 0.5,
                                marker = list(size = 2))
-    fig <- fig %>% add_trace(splinefit_df, x = ~splinex, y = ~spliney, z = ~splinez, type="scatter3d", mode = 'lines',
+    fig <- fig %>% add_trace(splinefit_df, x = ~splinex, y = ~spliney, z = ~splinez, type="scatter3d", mode = 'lines+marker',
                              opacity = 1, line = list(width = 5, color = 'black', reverscale = FALSE))
     fig <- fig %>% layout(scene = list(xaxis = list(title = 'log(Mean)'),
                                        yaxis = list(title = 'log(CV)'),
@@ -98,7 +96,7 @@ HVG_splinefit <- function(data, nHVGs = 2000, show.spline = FALSE,
 
 scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
                   show.spline = FALSE, calcHVG = FALSE,
-                  nfeatures = 200, ncells = 10,
+                  nfeatures = 200, ncells = 10, norm_sep = F,
                   rm.mt = FALSE, rm.rp = FALSE, filter_data = TRUE){
 
   #> data -> Gene x Cell count matrix in the form of a data frame, matrix or sparse matrix with
@@ -137,7 +135,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
 
   # Filtering
   if (filter_data == TRUE){
-    spmat <- spmat[,colCounts(spmat) > nfeatures]
+    spmat <- spmat[,colCounts(spmat) > nfeatures & colCounts(spmat) < quantile(colCounts(spmat),0.95)]
     spmat <- spmat[rowCounts(spmat) > ncells,]
   }
 
@@ -148,6 +146,9 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     if (i >= 1){GoI_Mask=append(GoI_Mask,"Active")
     } else {GoI_Mask=append(GoI_Mask,"Silenced")}
   }
+  print("Filtered counts:")
+  print(table(GoI_Mask))
+  GoI_Mask = as.factor(GoI_Mask)
 
   GoI_Mask = as.factor(GoI_Mask)
 
@@ -163,10 +164,13 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     spmat <- spmat[!startsWith(rownames(spmat),'MT-'), ]
   }
 
-  # Normalizing Data - Log-Normalization and scaling to 10,000
+  if (norm_sep == F){
+    # Normalizing Data - Log-Normalization and scaling to 10,000
+    matnorm = spmat
+    matnorm@x = matnorm@x / rep.int(colSums(matnorm), diff(matnorm@p))
+    matnorm@x = log(matnorm@x*10000+1) #Scale factor 10000
+  }
   matnorm = spmat
-  matnorm@x = matnorm@x / rep.int(colSums(matnorm), diff(matnorm@p))
-  matnorm@x = log(matnorm@x*10000+1) #Scale factor 10000
 
   if (calcHVG == T){
     print("Computing Highly Variable Genes")
@@ -204,6 +208,16 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   # Splitting the matrices
   SGS_WT = matnorm[,GoI_Mask=='Active']
   SGS_KO = matnorm[,GoI_Mask=='Silenced']
+
+  if (norm_sep == T){
+    # Normalizing SGS_WT - Log-Normalization and scaling to 10,000
+    SGS_WT@x = SGS_WT@x / rep.int(colSums(SGS_WT), diff(SGS_WT@p))
+    SGS_WT@x = log(SGS_WT@x*10000+1) #Scale factor 10000
+
+    # Normalizing SGS_KO - Log-Normalization and scaling to 10,000
+    SGS_KO@x = SGS_KO@x / rep.int(colSums(SGS_KO), diff(SGS_KO@p))
+    SGS_KO@x = log(SGS_KO@x*10000+1) #Scale factor 10000
+  }
 
   # Calculate percent expressed
   thresh.min <- 0
