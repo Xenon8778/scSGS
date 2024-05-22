@@ -1,0 +1,21 @@
+Package: scSGS
+Type: Package
+Title: Gene Function Analysis using stochastic Gene Silencing Patterns
+Version: 0.1.0
+Authors: c(person(given = "Shreyan", family = "Gupta", email = "xenon8778@tamu.edu", comment = c(ORCID = '0000-0003-4424-8422')),
+          person(given = "James", family = "Cai", comment = c(ORCID = '0000-0002-8081-6725'))
+              )
+Maintainer: The package maintainer <xenon8778@tamu.edu>
+Description: A method to study gene function using natural stochasticity using single-cell RNA sequencing (scRNA-seq) data.
+URL: https://github.com/Xenon8778/scSGS
+License: GPL (>=2)
+Encoding: UTF-8
+LazyData: true
+Imports: plotly,
+  Seurat,
+  dplyr,
+  sparseMatrixStats,
+  Matrix,
+  presto,
+  enrichR
+RoxygenNote: 7.3.1
