@@ -164,19 +164,15 @@ Annotate_cells <- function(data = x, res = 0.8, tissue = "All", Scale = F, annot
   #> tissue - Tissue type for which we are looking markers for
   #> DB - either 'scType' or 'PanDB'
 
-  db_ = "https://github.com/Xenon8778/scSGS/raw/main/data/scType_Updated.xlsx";
+  db_ = "https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/ScTypeDB_full.xlsx";
   if (DB == 'PanDB'){
     print("Using PanglaoDB")
     dataDB = prep_panglaodb(tissue = tissue, species = species)
-    if ("All" %in% tissue){
-      print("Checking across all celltypes.\n Specify following cell types for in-depth analysis")
-      print(unique(dataDB$tissueType))
-    }
   } else {
     print("Using ScType")
     dataDB = read.xlsx(db_)
     if ("All" %in% tissue){
-      print("Checking across all celltypes.\n Specify following cell types for in-depth analysis")
+      print("Checking across all celltypes.\n Specify follwing celltypes for in-depth analysis")
       print(unique(dataDB$tissueType))
     }
   }

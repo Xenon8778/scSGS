@@ -1,10 +1,11 @@
-## Load Libs
-library(plotly)
-library(Seurat)
-library(dplyr)
-library(sparseMatrixStats)
-library(Matrix)
-library(presto)
+#' @title Spline-HVG
+#' @author Shreyan Gupta <xenon8778@tamu.edu>
+#' @description Compute Highly Variable Genes
+#'
+#' Spline HVG function
+#' This function computed highly variable genes from an scRNAseq count matrix.
+#'
+#' @export HVG_splinefit
 
 HVG_splinefit <- function(data = x, degf = 15,
                           spar = 0.75, nHVGs = 2000, show.spline = FALSE,
@@ -94,6 +95,15 @@ HVG_splinefit <- function(data = x, degf = 15,
   return(splinefit_df)
 }
 
+#' @title scSGS
+#' @author Shreyan Gupta <xenon8778@tamu.edu>
+#' @description Predict SGS-reponsive genes
+#' @return A result list with - DV Genes dataframe, SGS-DE dataframe, TF List
+#' @export scSGS
+#' @examples
+#' Running scSGS
+#' scSGS(countMatrix = scRNAseq, GoI = 'G100', nHVG = 500)
+
 scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
                   show.spline = FALSE, calcHVG = FALSE,
                   nfeatures = 200, ncells = 10, norm_sep = F,
@@ -139,7 +149,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     spmat <- spmat[rowCounts(spmat) > ncells,]
   }
 
-  # Making binary counts
+  # Making binary counts of filtered data
   GoI = GoI
   GoI_Mask = c()
   for (i in spmat[GoI,]){
@@ -152,7 +162,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
 
   GoI_Mask = as.factor(GoI_Mask)
 
-  # Filter mitochondrial and ribosomal protein genes
+  # Filter Mitochondrial and Ribosomal protein genes
   if (rm.rp == T){
     spmat <- spmat[!startsWith(rownames(spmat),'Rps'), ]
     spmat <- spmat[!startsWith(rownames(spmat),'Rpl'), ]
@@ -164,8 +174,8 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     spmat <- spmat[!startsWith(rownames(spmat),'MT-'), ]
   }
 
+  # Normalizing Data Separately - Log-Normalization and scaling to 10,000
   if (norm_sep == F){
-    # Normalizing Data - Log-Normalization and scaling to 10,000
     matnorm = spmat
     matnorm@x = matnorm@x / rep.int(colSums(matnorm), diff(matnorm@p))
     matnorm@x = log(matnorm@x*10000+1) #Scale factor 10000
@@ -173,9 +183,10 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     matnorm = spmat
   }
 
+  # Compute Highly Variable Genes
   if (calcHVG == T){
     print("Computing Highly Variable Genes")
-    # Identifying HVGs with 3D Splinefit
+    # Identifying HVGs with Spline-HVG
     if (HVG_algo == 'splinefit'){
       HVG_df = HVG_splinefit(spmat, nHVGs = nHVG, show.spline = show.spline)
       res$HVG_df = HVG_df
@@ -193,7 +204,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
       res$HV_genes = row.names(HVG_df[HVG_df$vst.variable == T,])
     }
 
-    ## Load TF Database
+    ## Load TF Database to check if gene is a known TF
     library('openxlsx')
     Tf_db = read.xlsx('https://static-content.springer.com/esm/art%3A10.1038%2Fs41587-020-0742-6/MediaObjects/41587_2020_742_MOESM3_ESM.xlsx')[,1]
     res$TF = res$HV_genes[res$HV_genes %in% Tf_db]
@@ -293,7 +304,6 @@ get.Enrichment <- function(res, db = "GO_Biological_Process_2023", ngenes = NULL
   #> ngenes -> number of significant genes to use, else uses all significant genes
 
   # Load Enrichr
-  library(enrichR)
   setEnrichrSite("Enrichr")
   dbs <- c(db)
 
@@ -319,43 +329,13 @@ get.Enrichment <- function(res, db = "GO_Biological_Process_2023", ngenes = NULL
   return(enrichr_df)
 }
 
-get.STRINGdb <- function(res, version = "12.0", species = 9606, ngenes = NULL){
-  #> res -> scSGS result
-  #> version -> STRING database version to use
-  #> species -> STRING database species code (eg, Human - 9606, Mouse - 10090)
-  #> ngenes -> number of significant genes to use, else uses all significant genes
 
-  library(STRINGdb)
-
-  # Extracting Significant Gene list
-  if (is.null(ngenes)){
-    DE_df = res$DE %>% arrange(p_val) %>% filter(p_val < 0.05)
-  } else {
-    DE_df = res$DE %>% arrange(p_val) %>% filter(p_val < 0.05)
-    DE_df = DE_df[1:ngenes,]
-  }
-
-  # Loading STRING-db
-  version = as.character(version)
-  string_db <- STRINGdb$new(version = version, species = species, score_threshold = 200,
-                            input_directory="")
-
-  # Mapping gene symbol to String ID
-  net_mapped <- string_db$map(DE_df, 'genes', removeUnmappedRows = TRUE )
-  hits <- net_mapped$STRING_id
-
-  httr::set_config(httr::config(ssl_verifypeer=0L))
-  # Plotting String Network
-  string_db$plot_network(hits)
-}
-
-
-# # Testing Code
-# pbmc10k = readRDS('PBMC/pbmc10k_annot.rds')
-# mat = GetAssayData(subset(pbmc10k, subset = scType_anno == 'Naive CD4+ T cells'),
-#                    layer = 'counts')
-# mat = as.data.frame(mat)
-# res = scSGS(mat, GoI = 'STAT1', nHVG = 500, rm.mt = T, rm.rp = T, HVG_algo = 'splinefit')
-# get.DE(res)
-# get.Enrichment(res, db = "GO_Biological_Process_2023", ngenes = 200)
-# get.STRINGdb(res, version = "12.0", species = 9606, ngenes = 30)
+#' # Test Code
+#' pbmc10k = readRDS('PBMC/pbmc10k_annot.rds')
+#' mat = GetAssayData(subset(pbmc10k, subset = scType_anno == 'Naive CD4+ T cells'),
+#'                    layer = 'counts')
+#' mat = as.data.frame(mat)
+#' res = scSGS(mat, GoI = 'STAT1', nHVG = 500, rm.mt = T, rm.rp = T, HVG_algo = 'splinefit')
+#' get.DE(res)
+#' get.Enrichment(res, db = "GO_Biological_Process_2023", ngenes = 200)
+#' get.STRINGdb(res, version = "12.0", species = 9606, ngenes = 30)
