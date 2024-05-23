@@ -13,7 +13,7 @@ HVG_splinefit <- function(data = x, degf = 15,
   adata = data
 
   ## Highly Variable Genes
-  Dropout = rowSums(adata == 0)
+  Dropout = sparseMatrixStats::rowSums(adata == 0)
   Dropout = Dropout/ncol(adata)
   Means = rowMeans(adata)
   SDs = rowSds(adata)
