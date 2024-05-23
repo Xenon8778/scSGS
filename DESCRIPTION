@@ -18,5 +18,5 @@ Imports: plotly,
   Matrix,
   presto,
   enrichR,
-  Biobase,
+  Biobase
 RoxygenNote: 7.3.1
