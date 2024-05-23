@@ -135,7 +135,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   GoI = GoI
   GoI_Mask = c()
   for (i in spmat[GoI,]){
-    if (i >= 1){GoI_Mask=append(GoI_Mask,"Active")
+    if (i > 0){GoI_Mask=append(GoI_Mask,"Active")
     } else {GoI_Mask=append(GoI_Mask,"Silenced")}
   }
   print("SGS counts:")
@@ -154,7 +154,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   GoI = GoI
   GoI_Mask = c()
   for (i in spmat[GoI,]){
-    if (i >= 1){GoI_Mask=append(GoI_Mask,"Active")
+    if (i > 0){GoI_Mask=append(GoI_Mask,"Active")
     } else {GoI_Mask=append(GoI_Mask,"Silenced")}
   }
   print("Filtered counts:")
