@@ -1,11 +1,11 @@
 #' @title Spline-HVG
-#' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' @description Compute Highly Variable Genes
-#'
+#' @export HVG_splinefit
+#' @importFrom sparseMatrixStats rowMeans rowSums rowSds
+#' @importFrom sparseMatrixStats rowMeans rowSums rowSds
+#' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' Spline HVG function
 #' This function computed highly variable genes from an scRNAseq count matrix.
-#'
-#' @export HVG_splinefit
 
 HVG_splinefit <- function(data = x, degf = 15,
                           spar = 0.75, nHVGs = 2000, show.spline = FALSE,
@@ -95,11 +95,12 @@ HVG_splinefit <- function(data = x, degf = 15,
   return(splinefit_df)
 }
 
+#' @export scSGS
+#' @importFrom sparseMatrixStats colCounts rowCounts rowSums
 #' @title scSGS
 #' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' @description Predict SGS-reponsive genes
 #' @return A result list with - DV Genes dataframe, SGS-DE dataframe, TF List
-#' @export scSGS
 #' @examples
 #' Running scSGS
 #' scSGS(countMatrix = scRNAseq, GoI = 'G100', nHVG = 500)
