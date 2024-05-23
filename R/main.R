@@ -1,22 +1,30 @@
 #' @title Spline-HVG
 #' @description Compute Highly Variable Genes
 #' @export HVG_splinefit
-#' @importFrom sparseMatrixStats rowMeans rowSums rowSds
-#' @importFrom sparseMatrixStats rowMeans rowSums rowSds
+#' @import dplyr
+#' @import plotly
+#' @rawNamespace import(ggplot2, except = last_plot)
+#' @importFrom sparseMatrixStats rowSds
+#' @importFrom Matrix rowSums rowMeans
+#' @importFrom utils setTxtProgressBar txtProgressBar
+#' @importFrom Biobase matchpt
+#' @importFrom stats p.adjust predict quantile smooth.spline
+#' @importFrom methods as
 #' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' Spline HVG function
 #' This function computed highly variable genes from an scRNAseq count matrix.
 
-HVG_splinefit <- function(data = x, degf = 15,
+HVG_splinefit <- function(adata, degf = 15,
                           spar = 0.75, nHVGs = 2000, show.spline = FALSE,
                           use.ndist = T){
-  adata = data
 
-  ## Highly Variable Genes
-  Dropout = sparseMatrixStats::rowSums(adata == 0)
+  ## Gene Statistics
+  print('Computing Gene Statistics')
+  bin_data <- adata == 0
+  Dropout = Matrix::rowSums(bin_data)
   Dropout = Dropout/ncol(adata)
-  Means = rowMeans(adata)
-  SDs = rowSds(adata)
+  Means = Matrix::rowMeans(adata)
+  SDs = sparseMatrixStats::rowSds(adata)
   CV = SDs/Means
   splinefit_df = as.data.frame(Means)
   splinefit_df$CV = CV
@@ -41,6 +49,7 @@ HVG_splinefit <- function(data = x, degf = 15,
   fitz <- smooth.spline(s, splinefit_df$Dropout, df = degf, spar = spar)
 
   # Computing Distances
+  print('Computing Distances')
   xyz1 = cbind(predict(fitx,s)$y,predict(fity,s)$y,predict(fitz,s)$y)
   xyz1 = as.data.frame(xyz1)
   colnames(xyz1) = c('logMean','logCV','Dropout')
@@ -55,7 +64,6 @@ HVG_splinefit <- function(data = x, degf = 15,
     }
     close(pb)
   } else {
-    library(Biobase)
     Dist_HVG = c()
     df = as.matrix(xyz1)
     pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
@@ -96,14 +104,18 @@ HVG_splinefit <- function(data = x, degf = 15,
 }
 
 #' @export scSGS
-#' @importFrom sparseMatrixStats colCounts rowCounts rowSums
+#' @importFrom sparseMatrixStats rowSums2 colSums2
+#' @import dplyr
+#' @import openxlsx
+#' @import Seurat
+#' @import presto
+#' @importFrom utils setTxtProgressBar txtProgressBar
+#' @importFrom Matrix rowSums rowMeans colSums
+#' @importFrom methods is
 #' @title scSGS
 #' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' @description Predict SGS-reponsive genes
 #' @return A result list with - DV Genes dataframe, SGS-DE dataframe, TF List
-#' @examples
-#' Running scSGS
-#' scSGS(countMatrix = scRNAseq, GoI = 'G100', nHVG = 500)
 
 scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
                   show.spline = FALSE, calcHVG = FALSE,
@@ -121,7 +133,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   # show.spline = FALSE
 
   # Converting to Sparse matrix
-  if (class(data) != "dgCMatrix"){
+  if (is(class(data), "dgCMatrix")){
     print('Converting to sparse')
     spmat = as.matrix(data)
     spmat = as(spmat, "dgCMatrix")
@@ -141,13 +153,14 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   print("SGS counts:")
   print(table(GoI_Mask))
   GoI_Mask = as.factor(GoI_Mask)
-
   res$GoI_Mask = GoI_Mask
 
   # Filtering
   if (filter_data == TRUE){
-    spmat <- spmat[,colCounts(spmat) > nfeatures & colCounts(spmat) < quantile(colCounts(spmat),0.95)]
-    spmat <- spmat[rowCounts(spmat) > ncells,]
+    Cell_Mask <- sparseMatrixStats::colSums2(spmat > 0) > nfeatures &
+      sparseMatrixStats::colSums2(spmat > 0) < quantile(sparseMatrixStats::colSums2(spmat > 0),0.95)
+    spmat <- spmat[,Cell_Mask]
+    spmat <- spmat[sparseMatrixStats::rowSums2(spmat) > ncells,]
   }
 
   # Making binary counts of filtered data
@@ -159,8 +172,6 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   }
   print("Filtered counts:")
   print(table(GoI_Mask))
-  GoI_Mask = as.factor(GoI_Mask)
-
   GoI_Mask = as.factor(GoI_Mask)
 
   # Filter Mitochondrial and Ribosomal protein genes
@@ -178,7 +189,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   # Normalizing Data Separately - Log-Normalization and scaling to 10,000
   if (norm_sep == F){
     matnorm = spmat
-    matnorm@x = matnorm@x / rep.int(colSums(matnorm), diff(matnorm@p))
+    matnorm@x = matnorm@x / rep.int(Matrix::colSums(matnorm), diff(matnorm@p))
     matnorm@x = log(matnorm@x*10000+1) #Scale factor 10000
   } else {
     matnorm = spmat
@@ -206,7 +217,6 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     }
 
     ## Load TF Database to check if gene is a known TF
-    library('openxlsx')
     Tf_db = read.xlsx('https://static-content.springer.com/esm/art%3A10.1038%2Fs41587-020-0742-6/MediaObjects/41587_2020_742_MOESM3_ESM.xlsx')[,1]
     res$TF = res$HV_genes[res$HV_genes %in% Tf_db]
 
@@ -285,6 +295,14 @@ get.DE <- function(res){
 get.HVGenes <- function(res){
   return(res$HV_genes) #Returns the n Highly variable genes
 }
+
+
+#' @export get.Enrichment
+#' @import enrichR
+#' @title get.Enrichment
+#' @author Shreyan Gupta <xenon8778@tamu.edu>
+#' @description Get enrichR gene function results
+#' @return A result list with - enrichR DF, anrichr barplot
 
 get.Enrichment <- function(res, db = "GO_Biological_Process_2023", ngenes = NULL,
                            plot.it = T){
