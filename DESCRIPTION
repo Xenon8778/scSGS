@@ -17,5 +17,6 @@ Imports: plotly,
   sparseMatrixStats,
   Matrix,
   presto,
-  enrichR
+  enrichR,
+  Biobase,
 RoxygenNote: 7.3.1
