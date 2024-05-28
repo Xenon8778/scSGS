@@ -25,10 +25,6 @@ A result list with - DV Genes dataframe, SGS-DE dataframe, TF List
 \description{
 Predict SGS-reponsive genes
 }
-\examples{
-Running scSGS
-scSGS(countMatrix = scRNAseq, GoI = 'G100', nHVG = 500)
-}
 \author{
 Shreyan Gupta <xenon8778@tamu.edu>
 }

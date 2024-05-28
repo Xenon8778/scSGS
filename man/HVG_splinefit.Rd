@@ -5,7 +5,7 @@
 \title{Spline-HVG}
 \usage{
 HVG_splinefit(
-  data = x,
+  adata,
   degf = 15,
   spar = 0.75,
   nHVGs = 2000,
@@ -15,10 +15,9 @@ HVG_splinefit(
 }
 \description{
 Compute Highly Variable Genes
-
-Spline HVG function
-This function computed highly variable genes from an scRNAseq count matrix.
 }
 \author{
 Shreyan Gupta <xenon8778@tamu.edu>
+Spline HVG function
+This function computed highly variable genes from an scRNAseq count matrix.
 }
