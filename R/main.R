@@ -158,7 +158,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   # Filtering
   if (filter_data == TRUE){
     Cell_Mask <- sparseMatrixStats::colSums2(spmat > 0) > nfeatures &
-      sparseMatrixStats::colSums2(spmat > 0) < quantile(sparseMatrixStats::colSums2(spmat > 0),0.95)
+      sparseMatrixStats::colSums2(spmat > 0) < quantile(sparseMatrixStats::colSums2(spmat > 0),0.99)
     spmat <- spmat[,Cell_Mask]
     spmat <- spmat[sparseMatrixStats::rowSums2(spmat) > ncells,]
   }
