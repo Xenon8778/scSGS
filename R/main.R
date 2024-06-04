@@ -106,9 +106,9 @@ HVG_splinefit <- function(adata, degf = 15,
 #' @export scSGS
 #' @importFrom sparseMatrixStats rowSums2 colSums2
 #' @import dplyr
+#' @import presto
 #' @import openxlsx
 #' @import Seurat
-#' @import presto
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom Matrix rowSums rowMeans colSums
 #' @importFrom methods is
