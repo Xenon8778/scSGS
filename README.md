@@ -1,5 +1,7 @@
 # scSGS [Under Development]
-Single-cell Stochastic Gene Silencing - A method to study gene function using the natural stochasticity in gene expression.
+![Figure 1](https://github.com/Xenon8778/scSGS/assets/61325229/690106cb-6441-444e-b4e9-cccd36466638)
+
+This is the main repository for single-cell Stochastic Gene Silencing (scSGS) - A method to study gene function using the natural stochasticity in gene expression.
 
 The scripts for preprocessing and analyzing publicly available datasets are in the '/scripts' folder.
 
