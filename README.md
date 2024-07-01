@@ -1,5 +1,7 @@
 # scSGS [Under Development]
-single-cell Stochastic Gene Silencing - A method to study gene function using natural stochasticity in gene expression
+Single-cell Stochastic Gene Silencing - A method to study gene function using the natural stochasticity in gene expression.
+
+The scripts for preprocessing and analyzing publicly available datasets are in the '/scripts' folder.
 
 # Install scSGS
 ```R
