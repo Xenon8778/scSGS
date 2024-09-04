@@ -1,6 +1,5 @@
 #' @title Spline-HVG
 #' @description Compute Highly Variable Genes
-#' @export HVG_splinefit
 #' @import dplyr
 #' @import plotly
 #' @rawNamespace import(ggplot2, except = last_plot)
@@ -126,12 +125,6 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   #>         rows as genes and columns as cells. Row names should be gene names.
   #> GoI -> Gene of Interest for scSGS analysis
 
-  # data = mat
-  # GoI = 'STAT1'
-  # HVG_algo = 'splinefit'
-  # nHVG = 500
-  # show.spline = FALSE
-
   # Converting to Sparse matrix
   if (is(class(data), "dgCMatrix")){
     print('Converting to sparse')
@@ -256,7 +249,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   )
 
   # Calculate fold change
-  FC_KO <- log(x = (rowSums(SGS_KO) + 1)/ncol(SGS_WT), base = 2)
+  FC_KO <- log(x = (rowSums(SGS_KO) + 1)/ncol(SGS_KO), base = 2)
   FC_WT <- log(x = (rowSums(SGS_WT) + 1)/ncol(SGS_WT), base = 2)
   fc <- (FC_KO - FC_WT)
   fc.results <- as.data.frame(x = cbind(fc, pct.KO, pct.WT))
