@@ -12,5 +12,5 @@ devtools::install_github("immunogenomics/presto")
 devtools::install_github("Xenon8778/scSGS")
 ```
 # Repo contents
-"/scripts" - contains R files used for analysis of each dataset.
-"/data" - contains .xlsx containing markers genes for cell type annotation from scTypeDB.
+- /scripts - contains R files used for analysis of each dataset.
+- /data - contains .xlsx containing markers genes for cell type annotation from scTypeDB.
