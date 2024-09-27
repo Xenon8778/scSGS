@@ -11,6 +11,7 @@ scSGS(
   HVG_algo = "splinefit",
   show.spline = FALSE,
   calcHVG = FALSE,
+  verbose = TRUE,
   nfeatures = 200,
   ncells = 10,
   norm_sep = F,
@@ -19,11 +20,42 @@ scSGS(
   filter_data = TRUE
 )
 }
+\arguments{
+\item{data}{A matrix. Matrix containing scRNA-seq expression with genes as rows and cells as columns.}
+
+\item{GoI}{A character. Target gene.}
+
+\item{HVG_algo}{A character. Highly variable gene selected method. Default == 'splinefit'. 'seurat' to call Seurat's in-built  HVG selection.}
+
+\item{show.spline}{A Boolean value (TRUE/FALSE), if TRUE, plots spline as a 3D Plotly plot.}
+
+\item{calcHVG}{A Boolean value (TRUE/FALSE), if TRUE, computes highly variable genes, else directly moves ahead to scSGS analysis.}
+
+\item{verbose}{A Boolean value (TRUE/FALSE), if TRUE, displays progress bar.}
+
+\item{nfeatures}{An integer value. Defines the minimum features/genes required for a cell to be included in the analysis.}
+
+\item{ncells}{An integer value. Defines the minimum cells required for a gene to be included in the analysis.}
+
+\item{norm_sep}{A Boolean value (TRUE/FALSE), if TRUE, normalizes KO and WT subset separately.}
+
+\item{rm.mt}{A Boolean value (TRUE/FALSE), if TRUE, removes mitochondrial genes from analysis.}
+
+\item{rm.rp}{A Boolean value (TRUE/FALSE), if TRUE, removes ribosomal protein coding  genes from analysis.}
+
+\item{filter_data}{A Boolean value (TRUE/FALSE), if TRUE, filters cells and genes. Recommended!}
+}
 \value{
-A result list with - DV Genes dataframe, SGS-DE dataframe, TF List
+A result list with - SGS-DE data.frame, HVG_df data.frame, GoI_Mask List, Known TF list, Highly variable genes List
 }
 \description{
 Predict SGS-reponsive genes
+}
+\examples{
+## Load Random Data
+counts = matrix(rpois(500*500, lambda = 0.5), ncol=500)
+HVG_res <- scSGS(counts, GoI = 10, calcHVG = TRUE)
+
 }
 \author{
 Shreyan Gupta <xenon8778@tamu.edu>

@@ -2,22 +2,42 @@
 % Please edit documentation in R/main.R
 \name{HVG_splinefit}
 \alias{HVG_splinefit}
-\title{Spline-HVG}
+\title{HVG_splinefit}
 \usage{
 HVG_splinefit(
   adata,
+  verbose = TRUE,
   degf = 15,
   spar = 0.75,
   nHVGs = 2000,
   show.spline = FALSE,
-  use.ndist = T
+  use.ndist = TRUE
 )
 }
+\arguments{
+\item{adata}{A dgCMatrix object. Sparse matrix contain scRNA-seq expression with genes as rows and cells as columns.}
+
+\item{verbose}{A Boolean value (TRUE/FALSE), if TRUE, displays progress bar.}
+
+\item{degf}{An integer value. Degrees of freedom for 3D spline computation.}
+
+\item{spar}{A double value. Smoothing parameter for 3D spline computation.}
+
+\item{nHVGs}{An integer value. Number of highly variables to select.}
+
+\item{show.spline}{A Boolean value (TRUE/FALSE), if TRUE, plots spline as a 3D Plotly plot.}
+
+\item{use.ndist}{A Boolean value (TRUE/FALSE), if TRUE, uses nearest distance on spline for distance computation, else, uses the genes original location on spline for distance computation.}
+}
 \description{
-Compute Highly Variable Genes
+This function computes highly variable genes from an scRNAseq count matrix.
+}
+\examples{
+## Load Random Data
+counts = matrix(rpois(500*500, lambda = 1), ncol=500)
+counts = as(counts,'dgCMatrix')
+HVG_res <- HVG_splinefit(counts, nHVGs = 100)
 }
 \author{
 Shreyan Gupta <xenon8778@tamu.edu>
-Spline HVG function
-This function computed highly variable genes from an scRNAseq count matrix.
 }

@@ -1,5 +1,7 @@
-#' @title Spline-HVG
-#' @description Compute Highly Variable Genes
+#' @export HVG_splinefit
+#' @title HVG_splinefit
+#' @description This function computes highly variable genes from an scRNAseq count matrix.
+#' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' @import dplyr
 #' @import plotly
 #' @rawNamespace import(ggplot2, except = last_plot)
@@ -10,12 +12,22 @@
 #' @importFrom stats p.adjust predict quantile smooth.spline
 #' @importFrom methods as
 #' @author Shreyan Gupta <xenon8778@tamu.edu>
-#' Spline HVG function
-#' This function computed highly variable genes from an scRNAseq count matrix.
+#' @param adata A dgCMatrix object. Sparse matrix contain scRNA-seq expression with genes as rows and cells as columns.
+#' @param verbose A Boolean value (TRUE/FALSE), if TRUE, displays progress bar.
+#' @param degf An integer value. Degrees of freedom for 3D spline computation.
+#' @param spar A double value. Smoothing parameter for 3D spline computation.
+#' @param nHVGs An integer value. Number of highly variables to select.
+#' @param show.spline A Boolean value (TRUE/FALSE), if TRUE, plots spline as a 3D Plotly plot.
+#' @param use.ndist A Boolean value (TRUE/FALSE), if TRUE, uses nearest distance on spline for distance computation, else, uses the genes original location on spline for distance computation.
+#' @examples
+#' ## Load Random Data
+#' counts = matrix(rpois(500*500, lambda = 1), ncol=500)
+#' counts = as(counts,'dgCMatrix')
+#' HVG_res <- HVG_splinefit(counts, nHVGs = 100)
 
-HVG_splinefit <- function(adata, degf = 15,
+HVG_splinefit <- function(adata, verbose = TRUE, degf = 15,
                           spar = 0.75, nHVGs = 2000, show.spline = FALSE,
-                          use.ndist = T){
+                          use.ndist = TRUE){
 
   ## Gene Statistics
   print('Computing Gene Statistics')
@@ -56,23 +68,23 @@ HVG_splinefit <- function(adata, degf = 15,
   euclidean <- function(a, b) sqrt(sum((a - b)^2))
   if (use.ndist == F){
     Dist_HVG = c()
-    pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
+    if (verbose) pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
     for (i in 1:nrow(xyz)){
       Dist_HVG = append(Dist_HVG,euclidean(xyz[i,],xyz1[i,]))
-      setTxtProgressBar(pb,i)
+      if (verbose) setTxtProgressBar(pb,i)
     }
-    close(pb)
+    if (verbose) close(pb)
   } else {
     Dist_HVG = c()
     df = as.matrix(xyz1)
-    pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
+    if (verbose) pb = txtProgressBar(min = 0, max = nrow(xyz), initial = 0, style = 3)
     for (i in 1:nrow(xyz)){
       p1 = as.matrix(xyz[i,])
       near_point = matchpt(p1, df)
       Dist_HVG = append(Dist_HVG,near_point$distance)
-      setTxtProgressBar(pb,i)
+      if (verbose) setTxtProgressBar(pb,i)
     }
-    close(pb)
+    if (verbose) close(pb)
   }
   splinefit_df$Distance = Dist_HVG
   splinefit_df$splinex = xyz1$logMean
@@ -98,11 +110,14 @@ HVG_splinefit <- function(adata, degf = 15,
   }
 
 
-  splinefit_df = splinefit_df[order(splinefit_df$Distance, decreasing = T),]
+  splinefit_df = splinefit_df[order(splinefit_df$Distance, decreasing = TRUE),]
   return(splinefit_df)
 }
 
 #' @export scSGS
+#' @title scSGS
+#' @description Predict SGS-reponsive genes
+#' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' @importFrom sparseMatrixStats rowSums2 colSums2
 #' @import dplyr
 #' @import presto
@@ -111,13 +126,26 @@ HVG_splinefit <- function(adata, degf = 15,
 #' @importFrom utils setTxtProgressBar txtProgressBar
 #' @importFrom Matrix rowSums rowMeans colSums
 #' @importFrom methods is
-#' @title scSGS
-#' @author Shreyan Gupta <xenon8778@tamu.edu>
-#' @description Predict SGS-reponsive genes
-#' @return A result list with - DV Genes dataframe, SGS-DE dataframe, TF List
-
+#' @param data A matrix. Matrix containing scRNA-seq expression with genes as rows and cells as columns.
+#' @param GoI A character. Target gene.
+#' @param HVG_algo A character. Highly variable gene selected method. Default == 'splinefit'. 'seurat' to call Seurat's in-built  HVG selection.
+#' @param show.spline A Boolean value (TRUE/FALSE), if TRUE, plots spline as a 3D Plotly plot.
+#' @param calcHVG A Boolean value (TRUE/FALSE), if TRUE, computes highly variable genes, else directly moves ahead to scSGS analysis.
+#' @param verbose A Boolean value (TRUE/FALSE), if TRUE, displays progress bar.
+#' @param ncells An integer value. Defines the minimum cells required for a gene to be included in the analysis.
+#' @param nfeatures An integer value. Defines the minimum features/genes required for a cell to be included in the analysis.
+#' @param norm_sep A Boolean value (TRUE/FALSE), if TRUE, normalizes KO and WT subset separately.
+#' @param rm.mt A Boolean value (TRUE/FALSE), if TRUE, removes mitochondrial genes from analysis.
+#' @param rm.rp A Boolean value (TRUE/FALSE), if TRUE, removes ribosomal protein coding  genes from analysis.
+#' @param filter_data A Boolean value (TRUE/FALSE), if TRUE, filters cells and genes. Recommended!
+#' @return A result list with - SGS-DE data.frame, HVG_df data.frame, GoI_Mask List, Known TF list, Highly variable genes List
+#' @examples
+#' ## Load Random Data
+#' counts = matrix(rpois(500*500, lambda = 0.5), ncol=500)
+#' HVG_res <- scSGS(counts, GoI = 10, calcHVG = TRUE)
+#'
 scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
-                  show.spline = FALSE, calcHVG = FALSE,
+                  show.spline = FALSE, calcHVG = FALSE, verbose = TRUE,
                   nfeatures = 200, ncells = 10, norm_sep = F,
                   rm.mt = FALSE, rm.rp = FALSE, filter_data = TRUE){
 
@@ -168,13 +196,13 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   GoI_Mask = as.factor(GoI_Mask)
 
   # Filter Mitochondrial and Ribosomal protein genes
-  if (rm.rp == T){
+  if (rm.rp == TRUE){
     spmat <- spmat[!startsWith(rownames(spmat),'Rps'), ]
     spmat <- spmat[!startsWith(rownames(spmat),'Rpl'), ]
     spmat <- spmat[!startsWith(rownames(spmat),'RPS'), ]
     spmat <- spmat[!startsWith(rownames(spmat),'RPL'), ]
   }
-  if (rm.mt == T){
+  if (rm.mt == TRUE){
     spmat <- spmat[!startsWith(rownames(spmat),'mt-'), ]
     spmat <- spmat[!startsWith(rownames(spmat),'MT-'), ]
   }
@@ -189,13 +217,14 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   }
 
   # Compute Highly Variable Genes
-  if (calcHVG == T){
+  if (calcHVG == TRUE){
     print("Computing Highly Variable Genes")
     # Identifying HVGs with Spline-HVG
     if (HVG_algo == 'splinefit'){
-      HVG_df = HVG_splinefit(spmat, nHVGs = nHVG, show.spline = show.spline)
+      HVG_df = HVG_splinefit(spmat, nHVGs = nHVG, show.spline = show.spline,
+                             verbose =verbose)
       res$HVG_df = HVG_df
-      res$HV_genes = row.names(HVG_df[HVG_df$HVG == T &
+      res$HV_genes = row.names(HVG_df[HVG_df$HVG == TRUE &
                                         HVG_df$Dropout>0.25 &
                                         HVG_df$Dropout<0.75,])
     }
@@ -206,7 +235,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
       seuratmat = FindVariableFeatures(seuratmat, selection.method = "vst", nfeatures = 500)
       HVG_df = seuratmat@meta.features
       res$HVG_df = HVG_df
-      res$HV_genes = row.names(HVG_df[HVG_df$vst.variable == T,])
+      res$HV_genes = row.names(HVG_df[HVG_df$vst.variable == TRUE,])
     }
 
     ## Load TF Database to check if gene is a known TF
@@ -214,7 +243,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
     res$TF = res$HV_genes[res$HV_genes %in% Tf_db]
 
     ## Check if GoI is HVG
-    if (GoI %in% res$HV_genes == T){
+    if (GoI %in% res$HV_genes == TRUE){
       print("The Gene of Interest is an HVG")
     } else {
       print("Beware! The Gene of Interest is not variable enough.")
@@ -225,7 +254,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   SGS_WT = matnorm[,GoI_Mask=='Active']
   SGS_KO = matnorm[,GoI_Mask=='Silenced']
 
-  if (norm_sep == T){
+  if (norm_sep == TRUE){
     # Normalizing SGS_WT - Log-Normalization and scaling to 10,000
     SGS_WT@x = SGS_WT@x / rep.int(colSums(SGS_WT), diff(SGS_WT@p))
     SGS_WT@x = log(SGS_WT@x*10000+1) #Scale factor 10000
@@ -281,73 +310,3 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   return(res)
 }
 
-get.DE <- function(res){
-  return(res$DE) # Returns the Differential Expression dataframe
-}
-
-get.HVGenes <- function(res){
-  return(res$HV_genes) #Returns the n Highly variable genes
-}
-
-
-#' @export get.Enrichment
-#' @import enrichR
-#' @title get.Enrichment
-#' @author Shreyan Gupta <xenon8778@tamu.edu>
-#' @description Get enrichR gene function results
-#' @return A result list with - enrichR DF, anrichr barplot
-
-get.Enrichment <- function(res, db = "GO_Biological_Process_2023", ngenes = NULL,
-                           plot.it = T){
-
-  #> Performs gene set enrichment analysis with Enrichr
-  #>
-  #> Chen EY, Tan CM, Kou Y, Duan Q, Wang Z, Meirelles GV, Clark NR, Ma'ayan A.
-  #> Enrichr: interactive and collaborative HTML5 gene list enrichment analysis tool.
-  #> BMC Bioinformatics. 2013;128(14)
-  #>
-  #> Kuleshov MV, Jones MR, Rouillard AD, Fernandez NF, Duan Q, Wang Z, Koplev S,
-  #> Jenkins SL, Jagodnik KM, Lachmann A, McDermott MG, Monteiro CD, Gundersen GW, Ma'ayan A.
-  #> Enrichr: a comprehensive gene set enrichment analysis web server 2016 update.
-  #> Nucleic Acids Research. 2016; gkw377.
-  #>
-  #> res -> scSGS result
-  #> db -> Pathway database to use
-  #> ngenes -> number of significant genes to use, else uses all significant genes
-
-  # Load Enrichr
-  setEnrichrSite("Enrichr")
-  dbs <- c(db)
-
-  # Extracting Significant Gene list
-  if (is.null(ngenes)){
-    DE_df = res$DE %>% arrange(p_val) %>% filter(p_val < 0.05)
-    DE_gl = DE_df %>% pull(genes)
-  } else {
-    DE_df = res$DE %>% arrange(p_val) %>% filter(p_val < 0.05)
-    DE_gl = DE_df[1:ngenes,] %>% pull(genes)
-  }
-
-  # Performing Enrichment with Enrichr
-  enrichr_df <- enrichr(DE_gl, db)
-
-  # plotting
-  if (plot.it == T){
-    p1 = plotEnrich(enrichr_df[[1]], showTerms = 10, numChar = 100,
-                    y = "Count", orderBy = "Adjusted.P.value", title = db)+
-      scale_fill_gradient(low = '#ED90A4',high = '#5AB5E2')
-    plot(p1)
-  }
-  return(enrichr_df)
-}
-
-
-#' # Test Code
-#' pbmc10k = readRDS('PBMC/pbmc10k_annot.rds')
-#' mat = GetAssayData(subset(pbmc10k, subset = scType_anno == 'Naive CD4+ T cells'),
-#'                    layer = 'counts')
-#' mat = as.data.frame(mat)
-#' res = scSGS(mat, GoI = 'STAT1', nHVG = 500, rm.mt = T, rm.rp = T, HVG_algo = 'splinefit')
-#' get.DE(res)
-#' get.Enrichment(res, db = "GO_Biological_Process_2023", ngenes = 200)
-#' get.STRINGdb(res, version = "12.0", species = 9606, ngenes = 30)
