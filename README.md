@@ -6,10 +6,12 @@ This is the main repository for scSGS - A method to study gene function using th
 The scripts for preprocessing and analyzing publicly available datasets are in the '/scripts' folder.
 
 # Install scSGS
+scSGS requires [presto](https://github.com/immunogenomics/presto) for fast computation of DE genes using the wilcoxon rank-sum test.
 ```R
-# install.packages("devtools")
-devtools::install_github("immunogenomics/presto")
-devtools::install_github("Xenon8778/scSGS")
+if(!require(remotes)) install.packages('remotes')
+
+remotes::install_github("immunogenomics/presto")
+remotes::install_github("Xenon8778/scSGS")
 ```
 # Repo contents
 - /scripts - contains R files used for analysis of each dataset.
