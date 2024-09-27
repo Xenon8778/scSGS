@@ -21,6 +21,7 @@ knitr::opts_chunk$set(
 
 # Overview 
 This tutorial shows how to use **scSGS** for gene function analysis in a WT single-cell RNA seq sample and **Spline-HVG** for highly variable feature selection.
+
 # Installation
 scSGS requires [presto](https://github.com/immunogenomics/presto) for fast computation of DE genes using the wilcoxon rank-sum test.
 ```{r Installation, eval=FALSE}
