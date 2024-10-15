@@ -7,7 +7,7 @@ The scripts for preprocessing and analyzing publicly available datasets are in t
 
 # Install scSGS
 scSGS requires [presto](https://github.com/immunogenomics/presto) for fast computation of DE genes using the wilcoxon rank-sum test.
-```{r}
+```R
 if(!require(remotes)) install.packages('remotes')
 
 remotes::install_github("immunogenomics/presto")
@@ -15,10 +15,9 @@ remotes::install_github("Xenon8778/scSGS")
 ```
 
 # scSGS analysis
-scSGS analysis should be performed with highly variable genes. The output of the algorithm is data.frame find the SGS-responsive genes and their P-values. HVG selection is done using HVG_splinefit which uses each gene's mean expression, CV and dropout rate to compute variability.
-```{r}
-SGS_res <- scSGS(GetAssayData(pbmc,layer = 'counts'), 'LYZ', nHVG = 500,
-                calcHVG = T)
+scSGS analysis should be performed for highly variable genes only. The input for the algorithm is a  scRNA-seq geneexpression matrix with genes as rows and cells as columns. The output of the algorithm is data.frame find the SGS-responsive genes and their P-values. HVG selection is done using HVG_splinefit which uses each gene's mean expression, CV, and dropout rate to compute variability.
+```T
+SGS_res <- scSGS(GetAssayData(adata, layer = 'counts'), 'LYZ', calcHVG = T)
 ```
 
 # Repo contents
