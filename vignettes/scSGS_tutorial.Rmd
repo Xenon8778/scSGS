@@ -33,7 +33,7 @@ remotes::install_github("Xenon8778/scSGS")
 
 # Import Libraries
 For this vignette, let’s use scSGS with the seurat package.
-```{r Loading libraries}
+```{r Loading libraries, message=FALSE}
 library(Seurat)
 library(scSGS)
 ```

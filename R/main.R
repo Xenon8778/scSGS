@@ -154,7 +154,7 @@ scSGS <- function(data, GoI, nHVG = 500, HVG_algo = 'splinefit',
   #> GoI -> Gene of Interest for scSGS analysis
 
   # Converting to Sparse matrix
-  if (is(class(data), "dgCMatrix")){
+  if (!is(class(data), "dgCMatrix")){
     print('Converting to sparse')
     spmat = as.matrix(data)
     spmat = as(spmat, "dgCMatrix")
