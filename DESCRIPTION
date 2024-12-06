@@ -1,7 +1,7 @@
 Package: scSGS
 Type: Package
 Title: Gene Function Analysis using Stochastic Gene Silencing Patterns
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(person(given = "Shreyan", family = "Gupta", email = "xenon8778@tamu.edu", role = c("aut","cre"), comment = c(ORCID = '0000-0002-1904-9862')),
           person(given = "James", family = "Cai", role = c("aut", "ctb", "ths"), comment = c(ORCID = '0000-0002-8081-6725'))
               )

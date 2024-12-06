@@ -5,8 +5,12 @@
 \title{HVG_splinefit}
 \usage{
 HVG_splinefit(
-  adata,
+  mat,
   verbose = TRUE,
+  dropout.filter = FALSE,
+  filter.data = TRUE,
+  nfeatures = 200,
+  ncells = 10,
   degf = 15,
   spar = 0.75,
   nHVGs = 2000,
@@ -15,9 +19,15 @@ HVG_splinefit(
 )
 }
 \arguments{
-\item{adata}{A dgCMatrix object. Sparse matrix contain scRNA-seq expression with genes as rows and cells as columns.}
-
 \item{verbose}{A Boolean value (TRUE/FALSE), if TRUE, displays progress bar.}
+
+\item{dropout.filter}{A Boolean value (TRUE/FALSE), if TRUE, filters out gene with dropout rate < 0.25 and > 0.75.}
+
+\item{filter.data}{A Boolean value (TRUE/FALSE), if TRUE, filters out gene with dropout rate < 0.25 and > 0.75.}
+
+\item{nfeatures}{An integer value. Defines the minimum features/genes required for a cell to be included in the analysis.}
+
+\item{ncells}{An integer value. Defines the minimum cells required for a gene to be included in the analysis.}
 
 \item{degf}{An integer value. Degrees of freedom for 3D spline computation.}
 
@@ -28,6 +38,8 @@ HVG_splinefit(
 \item{show.spline}{A Boolean value (TRUE/FALSE), if TRUE, plots spline as a 3D Plotly plot.}
 
 \item{use.ndist}{A Boolean value (TRUE/FALSE), if TRUE, uses nearest distance on spline for distance computation, else, uses the genes original location on spline for distance computation.}
+
+\item{adata}{A dgCMatrix object. Sparse matrix contain scRNA-seq expression with genes as rows and cells as columns.}
 }
 \description{
 This function computes highly variable genes from an scRNAseq count matrix.

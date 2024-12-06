@@ -1,6 +1,6 @@
 ---
 title: "Introduction to scSGS"
-author: Shreyan Gupta, James J Cai
+author: Shreyan Gupta, James J. Cai
 output:
   html_document:
     toc: true
@@ -20,10 +20,10 @@ knitr::opts_chunk$set(
 ```
 
 # Overview 
-This tutorial shows how to use **scSGS** for gene function analysis in a WT single-cell RNA seq sample and **Spline-HVG** for highly variable feature selection.
+This tutorial shows how to use **scSGS** to conduct gene function analysis on single-cell RNA-seq data from wild-type samples. We'll also explore the use of **Spline-HVG** for selecting highly variable features.
 
 # Installation
-scSGS requires [presto](https://github.com/immunogenomics/presto) for fast computation of DE genes using the wilcoxon rank-sum test.
+To install the required packages, ensure you have `remotes` installed. Then, install [presto](https://github.com/immunogenomics/presto) for efficient differential expression analysis using the Wilcoxon rank-sum test, and 'scSGS' for gene function analysis.
 ```{r Installation, eval=FALSE}
 if(!require(remotes)) install.packages('remotes')
 
@@ -32,14 +32,14 @@ remotes::install_github("Xenon8778/scSGS")
 ```
 
 # Import Libraries
-For this vignette, let’s use scSGS with the seurat package.
+Load the essential libraries for this analysis: 'Seurat' for single-cell data analysis and 'scSGS' for the specific functionalities we'll be using.
 ```{r Loading libraries, message=FALSE}
 library(Seurat)
 library(scSGS)
 ```
 
 # Load datasets
-For this tutorial, we will be analyzing the a dataset of Peripheral Blood Mononuclear Cells (PBMC) freely available from 10X Genomics. The raw data can be found [here] (https://cf.10xgenomics.com/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz)
+For this tutorial, We'll work with a publicly available Peripheral Blood Mononuclear Cells (PBMC) dataset from 10X Genomics.  The raw data can be found [here] (https://cf.10xgenomics.com/samples/cell/pbmc3k/pbmc3k_filtered_gene_bc_matrices.tar.gz). Read the 10X-formatted data and create a Seurat object.
 ```{r Load Seurat data, warning=FALSE}
 # Load the PBMC dataset
 pbmc.data <- Read10X(data.dir = "../../scSGS_Extra/data/filtered_gene_bc_matrices/hg19/")
@@ -48,41 +48,45 @@ pbmc
 ```
 
 ## Filtering 
-We filter cells that have unique feature counts over 2,500 or less than 200.
+To improve data quality, filter out cells with extremely low or high feature counts, which often indicate low-quality or technical noise. We filter cells that have unique feature counts over 2,500 or less than 200.
 ```{r Filtering}
 pbmc <- subset(pbmc, subset = nFeature_RNA > 200 & nFeature_RNA < 2500)
 pbmc
 ```
 
+# Identification of HVGs
+Identify HVGs using the `HVG_splinefit` function. This method leverages a spline-based approach to account for non-linear relationships between mean expression, coefficient of variation, and dropout rate.
+```{r}
+HVG_res = HVG_splinefit(GetAssayData(pbmc,layer = 'counts'), 
+                        dropout.filter = TRUE, nHVGs = 500)
+
+# HVG results
+head(HVG_res[HVG_res$HVG == TRUE,])
+```
+```{r TFs}
+# Highly Variable Genes that are known TFs 
+HVG_res[(HVG_res$HVG == TRUE & HVG_res$TF == TRUE),][1:5,]
+```
 # scSGS analysis
-We perform scSGS analysis with the most variable gene and find the SG-responsive genes. HVG selection is done using HVG_splinefit which uses each gene's mean expression, CV and dropout rate to compute variability.
+Perform scSGS analysis on the selected HVGs using the `scSGS` function. This function identifies genes that are co-expressed with a specific gene of interest (in this case, 'S100A9').
 ```{r scSGS analysis}
-SGS_res = scSGS(GetAssayData(pbmc,layer = 'counts'), 'LYZ',nHVG = 500,
-                calcHVG = T, verbose = FALSE)
+SGS_res = scSGS(GetAssayData(pbmc, layer='counts'), 'S100A9', nHVG=500,
+                rm.mt=T, rm.rp=T,
+                calcHVG=TRUE, verbose=TRUE)
 
 # scSGS DE results
 head(SGS_res$DE)
 ```
 
-```{r HVF data.frame}
-# Highly variable genes
-head(SGS_res$HVG_df)
-```
-
-```{r TFs}
-# Known TFs
-SGS_res$TF[1:5]
-```
-
 # Enrichment analysis
-We performed enrichment analysis with the [enrichR](https://cran.r-project.org/web/packages/enrichR/vignettes/enrichR.html) package.
+Conduct enrichment analysis to gain biological insights into the identified DE genes. Use the [enrichR](https://cran.r-project.org/web/packages/enrichR/vignettes/enrichR.html) package to query various databases for functional annotations.
 ```{r Enrichment, message=FALSE}
 library(enrichR)
 library(dplyr)
 library(ggplot2)
 
 setEnrichrSite("Enrichr")
-dbs <- c("KEGG_2021_Human")
+dbs <- c("GO_Biological_Process_2023")
 
 # Select top 200 genes
 SGS_DE_df = SGS_res$DE %>% arrange(p_val_adj) %>% filter(p_val_adj < 0.01) %>%
@@ -93,7 +97,7 @@ DE_gl = SGS_DE_df %>% pull(genes)
 enrichr_df <- enrichr(DE_gl, dbs)
 
 # Plotting
-p1 = plotEnrich(enrichr_df[[1]], showTerms = 10, numChar = 100,
+p1 = plotEnrich(enrichr_df[[1]], showTerms = 10, numChar = 60,
                 y = "Count", orderBy = "Adjusted.P.value", title = dbs)+
   scale_fill_gradient(low = 'firebrick',high = 'orange')
 plot(p1)

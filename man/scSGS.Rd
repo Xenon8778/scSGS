@@ -5,7 +5,7 @@
 \title{scSGS}
 \usage{
 scSGS(
-  data,
+  mat,
   GoI,
   nHVG = 500,
   HVG_algo = "splinefit",
@@ -14,15 +14,13 @@ scSGS(
   verbose = TRUE,
   nfeatures = 200,
   ncells = 10,
-  norm_sep = F,
+  norm.sep = F,
   rm.mt = FALSE,
   rm.rp = FALSE,
-  filter_data = TRUE
+  filter.data = TRUE
 )
 }
 \arguments{
-\item{data}{A matrix. Matrix containing scRNA-seq expression with genes as rows and cells as columns.}
-
 \item{GoI}{A character. Target gene.}
 
 \item{HVG_algo}{A character. Highly variable gene selected method. Default == 'splinefit'. 'seurat' to call Seurat's in-built  HVG selection.}
@@ -37,19 +35,21 @@ scSGS(
 
 \item{ncells}{An integer value. Defines the minimum cells required for a gene to be included in the analysis.}
 
-\item{norm_sep}{A Boolean value (TRUE/FALSE), if TRUE, normalizes KO and WT subset separately.}
+\item{norm.sep}{A Boolean value (TRUE/FALSE), if TRUE, normalizes KO and WT subset separately.}
 
 \item{rm.mt}{A Boolean value (TRUE/FALSE), if TRUE, removes mitochondrial genes from analysis.}
 
 \item{rm.rp}{A Boolean value (TRUE/FALSE), if TRUE, removes ribosomal protein coding  genes from analysis.}
 
-\item{filter_data}{A Boolean value (TRUE/FALSE), if TRUE, filters cells and genes. Recommended!}
+\item{filter.data}{A Boolean value (TRUE/FALSE), if TRUE, filters cells and genes. Recommended!}
+
+\item{data}{A matrix. Matrix containing scRNA-seq expression with genes as rows and cells as columns.}
 }
 \value{
 A result list with - SGS-DE data.frame, HVG_df data.frame, GoI_Mask List, Known TF list, Highly variable genes List
 }
 \description{
-Predict SGS-reponsive genes
+Predict SGS-responsive genes
 }
 \examples{
 ## Load Random Data
