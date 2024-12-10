@@ -4,6 +4,8 @@
 #' @author Shreyan Gupta <xenon8778@tamu.edu>
 #' @import dplyr
 #' @import plotly
+#' @import diptest
+#' @import pbapply
 #' @rawNamespace import(ggplot2, except = last_plot)
 #' @importFrom sparseMatrixStats rowSds
 #' @importFrom Matrix rowSums rowMeans
@@ -22,6 +24,7 @@
 #' @param spar A double value. Smoothing parameter for 3D spline computation.
 #' @param nHVGs An integer value. Number of highly variables to select.
 #' @param show.spline A Boolean value (TRUE/FALSE), if TRUE, plots spline as a 3D Plotly plot.
+#' @param show.spline A Boolean value (TRUE/FALSE), if TRUE, computes Hartigans' dip statistic to test for unimodality.
 #' @param use.ndist A Boolean value (TRUE/FALSE), if TRUE, uses nearest distance on spline for distance computation, else, uses the genes original location on spline for distance computation.
 #' @examples
 #' ## Load Random Data
@@ -32,6 +35,7 @@
 HVG_splinefit <- function(mat, verbose=TRUE, dropout.filter=FALSE,
                           filter.data=TRUE, nfeatures=200, ncells=10,
                           degf=15, spar=0.75, nHVGs=2000, show.spline=FALSE,
+                          diptest = TRUE,
                           use.ndist=TRUE){
 
   # Check number of genes
@@ -121,11 +125,34 @@ HVG_splinefit <- function(mat, verbose=TRUE, dropout.filter=FALSE,
   splinefit_df$splinex <- xyz1$logMean
   splinefit_df$spliney <- xyz1$logCV
   splinefit_df$splinez <- xyz1$Dropout
+
+  ## Perform dip.test
+  if (diptest){
+    message("Computing Hartigans' dip statistic...")
+    dip.res <- pbsapply(rownames(adata), FUN = function(x){
+      dip.test(adata[x,])$p.value
+    })
+    splinefit_df$dip.pval <- dip.res[rownames(splinefit_df)]
+  }
+
   if (dropout.filter) {
-    top_HVG = splinefit_df %>% filter(Dropout > 0.25 & Dropout < 0.75) %>%
+    if (diptest) {
+      top_HVG = splinefit_df %>%
+        filter(dip.pval < 0.05)
+    } else {
+      top_HVG = splinefit_df
+      }
+    top_HVG = top_HVG %>% filter(Dropout > 0.25 & Dropout < 0.75)  %>%
       top_n(n = nHVGs, wt = Distance)
   } else {
-    top_HVG = splinefit_df %>% top_n(n = nHVGs, wt = Distance)
+    if (diptest) {
+      top_HVG = splinefit_df %>%
+        filter(dip.pval < 0.05)
+    } else {
+      top_HVG = splinefit_df
+    }
+    top_HVG = top_HVG %>%
+      top_n(n = nHVGs, wt = Distance)
   }
 
   mask <- rownames(splinefit_df) %in% rownames(top_HVG)
@@ -135,6 +162,7 @@ HVG_splinefit <- function(mat, verbose=TRUE, dropout.filter=FALSE,
   ## Load TF Database to check if gene is a known TF
   Tf_db = read.xlsx('https://static-content.springer.com/esm/art%3A10.1038%2Fs41587-020-0742-6/MediaObjects/41587_2020_742_MOESM3_ESM.xlsx')[,1]
   splinefit_df$TF = rownames(splinefit_df) %in% Tf_db
+
 
 
   # Plotting in 3D

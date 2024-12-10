@@ -57,8 +57,8 @@ pbmc
 # Identification of HVGs
 Identify HVGs using the `HVG_splinefit` function. This method leverages a spline-based approach to account for non-linear relationships between mean expression, coefficient of variation, and dropout rate.
 ```{r}
-HVG_res = HVG_splinefit(GetAssayData(pbmc,layer = 'counts'), 
-                        dropout.filter = TRUE, nHVGs = 500)
+HVG_res = HVG_splinefit(GetAssayData(pbmc,layer = 'counts'), diptest=TRUE,
+                        dropout.filter=TRUE, nHVGs=500)
 
 # HVG results
 head(HVG_res[HVG_res$HVG == TRUE,])

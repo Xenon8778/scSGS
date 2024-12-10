@@ -15,6 +15,7 @@ HVG_splinefit(
   spar = 0.75,
   nHVGs = 2000,
   show.spline = FALSE,
+  diptest = TRUE,
   use.ndist = TRUE
 )
 }
@@ -35,7 +36,7 @@ HVG_splinefit(
 
 \item{nHVGs}{An integer value. Number of highly variables to select.}
 
-\item{show.spline}{A Boolean value (TRUE/FALSE), if TRUE, plots spline as a 3D Plotly plot.}
+\item{show.spline}{A Boolean value (TRUE/FALSE), if TRUE, computes Hartigans' dip statistic to test for unimodality.}
 
 \item{use.ndist}{A Boolean value (TRUE/FALSE), if TRUE, uses nearest distance on spline for distance computation, else, uses the genes original location on spline for distance computation.}
 
