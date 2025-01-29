@@ -8,7 +8,7 @@ The scripts for preprocessing and analyzing publicly available datasets are in t
 # Abstract
 Gene expression is a dynamic and stochastic process characterized by transcriptional bursting followed by periods of silence. Single-cell RNA sequencing (scRNA-seq) is a powerful tool to measure transcriptional bursting and silencing at the individual cell level. In this study, we introduce the single-cell Stochastic Gene Silencing (scSGS) method, which leverages the natural variability in single-cell gene expression to decipher gene function. For a target gene g under investigation, scSGS classifies cells into transcriptionally active (g+) and silenced (g-) samples. It then compares these cell samples to identify differentially expressed genes, referred to as SGS-responsive genes, which are used to infer the function of the target gene g. Analysis of real data demonstrates that scSGS can reveal regulatory relationships up- and downstream of target genes, circumventing the survivorship bias that often affects gene knockout and perturbation studies. scSGS thus offers an efficient approach for gene function prediction, with significant potential to reduce the use of genetically modified animals in gene function research.
 
-## Citation
+# Citation
 Gupta, S., Cai, J.J. Gene function revealed at the moment of sitochastic gene silencing. Commun Biol 8, 88 (2025). https://doi.org/10.1038/s42003-025-07530-0
 
 # Install scSGS
