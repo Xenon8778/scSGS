@@ -1,4 +1,6 @@
 # single-cell Stochastic Gene Silencing (scSGS)
+Read the full article [**Here**] (https://doi.org/10.1038/s42003-025-07530-0)
+
 ![Figure 1 - Compressed](https://github.com/Xenon8778/scSGS/assets/61325229/9c629e1e-4b34-456d-a80e-7476622ff6b4)
 
 This is the main repository for scSGS - A method to study gene function using the natural stochasticity in gene expression.
@@ -27,6 +29,8 @@ scSGS analysis should be performed for highly variable genes only. The input for
 ```R
 SGS_res <- scSGS(GetAssayData(adata, layer='counts'), GoI = 'LYZ', calcHVG = T)
 ```
+## Citation
+Gupta, S., Cai, J.J. Gene function revealed at the moment of sitochastic gene silencing. Commun Biol 8, 88 (2025). https://doi.org/10.1038/s42003-025-07530-0
 
 # Repo contents
 - /scripts - contains R files used for analysis of each dataset.
