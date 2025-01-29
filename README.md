@@ -1,5 +1,5 @@
 # single-cell Stochastic Gene Silencing (scSGS)
-Read the full article [**Here**] (https://doi.org/10.1038/s42003-025-07530-0)
+Read the full article [**Here**](https://doi.org/10.1038/s42003-025-07530-0)
 
 ![Figure 1 - Compressed](https://github.com/Xenon8778/scSGS/assets/61325229/9c629e1e-4b34-456d-a80e-7476622ff6b4)
 
